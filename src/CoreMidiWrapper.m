@@ -1,4 +1,5 @@
 /*
+ * ----------------------------------------------------------------------------
  * CoreMIDIWrapper.m
  *
  * This Objective-C file provides a simple wrapper around Apple's CoreMIDI
@@ -24,6 +25,8 @@
  * many assumptions along the way which may invalidate this library
  * completely. If you have suggestions, or better, fixes and improvements,
  * then please e-mail me!
+ *
+ * ----------------------------------------------------------------------------
  *
  * Copyright (C) 2009 David Moxey (dave@xyloid.org)
  *
@@ -57,6 +60,7 @@
 JavaVM *jvm;
 
 static void MIDIReadHandler(const MIDIPacketList *pkts, void *readRef, void *srcRef);
+static void freeSysexReq(MIDISysexSendRequest *req);
 
 // --------------------------------------------------------------------
 // MIDIListener class: simple subclass of NSObject which is designed to store
@@ -80,8 +84,6 @@ static void MIDIReadHandler(const MIDIPacketList *pkts, void *readRef, void *src
 @implementation MIDIListener
 
 - (id) initWithUniqueID:(SInt32)ID jCallback:(jobject)cb{
-  //  JNF_COCOA_ENTER();
-
   OSStatus       status;
   MIDIObjectType objType;
   JNIEnv        *env;
@@ -113,7 +115,8 @@ static void MIDIReadHandler(const MIDIPacketList *pkts, void *readRef, void *src
     // we should start to receive data. TODO: this really needs to be error
     // checked.
     MIDIClientCreate(CFSTR("CoreMidiListener"), NULL, NULL, &midiClient);
-    MIDIInputPortCreate(midiClient, CFSTR("CoreMidiListenerInput"), MIDIReadHandler, self, &inputPort);
+    MIDIInputPortCreate(midiClient, CFSTR("CoreMidiListenerInput"), MIDIReadHandler, 
+                        self, &inputPort);
     MIDIPortConnectSource(inputPort, source, NULL);    
   }
   
@@ -342,6 +345,11 @@ void MIDIReadHandler(const MIDIPacketList *pkts, void *readRef, void *srcRef) {
   [pool release];
 }
 
+static void freeSysexReq(MIDISysexSendRequest *req) {
+  free(req);
+}
+
+
 /*
  * Takes an input NSString and current JNIEnv and returns a JString. The
  * reference is NOT global.
@@ -418,13 +426,14 @@ JNIEXPORT void JNICALL Java_CoreMidiDevice_populateDeviceInfo(JNIEnv *env, jobje
   if (objType != kMIDIObjectType_Source && objType != kMIDIObjectType_Destination)
     return;
   
-  // Get MIDI object properties.
-  //MIDIObjectGetProperties(portRef, (CFPropertyListRef *)&portProps, YES);
-  
   pName = (NSString *)ConnectedEndpointName(portRef);
   (*env)->SetObjectField(env, obj, jfName,  nss2js(pName,  env));
   
+  // Get MIDI object properties. For now this method is defunct in favour of
+  // the above ConnectedEndpointName method.
   /*
+  MIDIObjectGetProperties(portRef, (CFPropertyListRef *)&portProps, YES);
+  
   pName  = [midiDeviceProps objectForKey:(NSString *)kMIDIPropertyName];
   pModel = [midiDeviceProps objectForKey:(NSString *)kMIDIPropertyModel];
   pMfct  = [midiDeviceProps objectForKey:(NSString *)kMIDIPropertyManufacturer];
@@ -451,7 +460,7 @@ JNIEXPORT void JNICALL Java_CoreMidiTransmitter_startListener(JNIEnv *env, jobje
   jlong         transPtr;
   jobject       globalRef;
   MIDIListener *listener;
-
+  
   // Grab source unique ID.
   jfuniqueID = (*env)->GetFieldID  (env, cls, "uniqueID", "I");
   jftransPtr = (*env)->GetFieldID  (env, cls, "transPtr", "J");
@@ -470,6 +479,7 @@ JNIEXPORT void JNICALL Java_CoreMidiTransmitter_startListener(JNIEnv *env, jobje
   // Create MIDI listener.
   listener = [[MIDIListener alloc] initWithUniqueID:(SInt32)uniqueID jCallback:globalRef];
 
+  // Store value of pointer in Java object.
   (*env)->SetLongField(env, obj, jftransPtr, (jlong)listener);
 }
 
@@ -479,28 +489,32 @@ JNIEXPORT void JNICALL Java_CoreMidiTransmitter_stopListener(JNIEnv *env, jobjec
   jlong         transPtr;
   MIDIListener  *listener;
   
+  // Grab current value of pointer.
   jftransPtr = (*env)->GetFieldID  (env, cls, "transPtr", "J");
   transPtr   = (*env)->GetLongField(env, obj, jftransPtr);
-
+  
+  // If listener already freed, then we're done!
   if (transPtr == 0)
     return;
 
+  // Deallocate listener.
   listener = (MIDIListener *)transPtr;
   [listener dealloc];
 
+  // Reset listener pointer to null.
   (*env)->SetLongField(env, obj, jftransPtr, (jlong)0);
 }
 
 // --------------------------------------------------------------------
-// MIDISender class: designed to do nothing but be a wrapper around a
-// virtual MIDI output port. Typically we store a reference to this
-// guy in the Java class.
+// MIDISender class: designed to do nothing but be a wrapper around a virtual
+// MIDI output port. We store a reference to one of these instances in the
+// associated Java class.
 // --------------------------------------------------------------------
 @interface MIDISender : NSObject {
-  SInt32 uniqueID;
+  SInt32          uniqueID;
   MIDIEndpointRef destPort;
-  MIDIPortRef outputPort;
-  MIDIClientRef midiClient;
+  MIDIPortRef     outputPort;
+  MIDIClientRef   midiClient;
 }
 - (id)initWithUniqueID:(SInt32)uniqueID;
 - (void)dealloc;
@@ -508,6 +522,7 @@ JNIEXPORT void JNICALL Java_CoreMidiTransmitter_stopListener(JNIEnv *env, jobjec
 @end
 
 @implementation MIDISender
+
 /*
  * Simple constructor. First find the right destination port (i.e. the
  * device's MIDI IN port. Then, for regular MIDI messages, we create a virtual
@@ -561,21 +576,22 @@ JNIEXPORT void JNICALL Java_CoreMidiTransmitter_stopListener(JNIEnv *env, jobjec
     MIDISysexSendRequest *req;
     Byte                 *msg;
     
-    // TODO: This memory is not freed after use! Probably need to write a
-    // small class to encompass each MIDISysexSendRequest.
-    msg = malloc(length);
-    req = malloc(sizeof(MIDISysexSendRequest));
+    // Allocate memory in a slightly clever way so that the freeSysexReq
+    // method can free up memory once the message is sent.
+    req = malloc(sizeof(MIDISysexSendRequest) + length);
+    msg = (Byte *)req + sizeof(MIDISysexSendRequest);
     
     // Copy sysex message into buffer.
     memcpy(msg, [data bytes], length);
     
+    // Set up send request.
     req->destination      = destPort;
     req->data             = (const Byte *)msg;
     req->bytesToSend      = length;
     req->complete         = false;
-    req->completionProc   = NULL;
-    req->completionRefCon = NULL; // TODO: use this callback to free memory!
-     
+    req->completionProc   = freeSysexReq;
+    req->completionRefCon = NULL;
+    
     // MIDISendSysex is special, sends data asynchronously.
     MIDISendSysex(req);
   } else {

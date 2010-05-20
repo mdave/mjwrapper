@@ -3,10 +3,14 @@ mjwrapper 0.1
 
 1. About
 --------
+
 mjwrapper is designed to fill a hole in Apple's OS X operating system. It is a
 well-known issue that Java applications cannot see MIDI devices using OS X
 10.5, 10.6 or some later versions of 10.4. This library is a bridge between
 CoreMIDI (Apple's interface to MIDI devices) and the Java world.
+
+UPDATE (15/5/10): Snow Leopard's latest Java patch theoretically re-adds
+support for MIDI devices under Java. However, sysex seems to be very buggy!
 
 Whilst there are currently two other known libraries which do this, there are
 several problems with 64-bit support and also the ability to send sysex
@@ -14,20 +18,20 @@ messages to the devices. To my knowledge, this is the first open-source
 implementation of such a library.
 
 This library was written in part to facilitate the use of the MegaDrum
-configuration tool on Mac OS X systems. (MegaDrum is an electronic drum
-controller which converts hits on electronic drums to MIDI notes - the MCT is
-a Java application which uses sysex messages to control it.) Also in part it
-was written in order to put something into the public domain, since other
+configuration tool (MCT) on Mac OS X systems. MegaDrum is an electronic drum
+controller which converts hits on electronic drums to MIDI notes. MCT is a
+Java application which uses sysex messages to control it. Also in part it was
+written in order to put something into the public domain, since other
 developers seemed less than willing to do this.
 
 DISCLAIMER: I am not a Java programmer, and this is the very first time I've
-written a major application using Java, CoreMIDI or any other MIDI framework
-for that matter. I have made many assumptions along the way which may
-invalidate this library completely. If you have suggestions, or better, fixes
-and improvements, then please visit the website at the bottom of this page and
-tell me about it! In addition, I make NO guarantees as to whether this library
-will work for you or not. I can only say that, in my case, things have worked
-fine.
+written a major application using Java, Objective-C/Cocoa, CoreMIDI or any
+other MIDI framework for that matter. I have made many assumptions along the
+way which may invalidate this library completely. If you have suggestions, or
+better, fixes and improvements, then please visit the website at the bottom of
+this page and tell me about it! In addition, I make NO guarantees as to
+whether this library will work for you or not. I can only say that, in my
+case, things have worked fine.
 
 As a side-node, mjwrapper stands for 'Mac Java Wrapper'.
 
@@ -36,11 +40,13 @@ As a side-node, mjwrapper stands for 'Mac Java Wrapper'.
 
 2. License
 ----------
+
 mjwrapper is distributed under the GPL v2. Please see the included LICENSE
 file for more information.
 
 3. Installation
 ---------------
+
 Installation is extremely quick and simple. 
   
   a) In the Finder, navigate to Go -> Go to Folder...
@@ -52,8 +58,10 @@ been tested on OS X 10.6 (Snow Leopard).
 
 4. Compilation
 --------------
+
 The full source code to mjwrapper is available in the src directory. To
-compile the source:
+compile the source, first install Apple's Developer Tools (included in the
+operating system DVDs), and then:
 
   a) Open a terminal and navigate to the src/ folder.
   b) Type 'make'.
@@ -64,6 +72,7 @@ way I have gone about implementing this library!
 
 5. Contact and Support
 ----------------------
+
 I offer advice and guidance to anyone that may be using mjwrapper on my
 website:
 
