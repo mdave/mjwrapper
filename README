@@ -10,7 +10,8 @@ well-known issue that Java applications cannot see MIDI devices using OS X
 CoreMIDI (Apple's interface to MIDI devices) and the Java world.
 
 UPDATE (15/5/10): Snow Leopard's latest Java patch theoretically re-adds
-support for MIDI devices under Java. However, sysex seems to be very buggy!
+support for MIDI devices under Java. However, sysex support seems to be very
+buggy!
 
 Whilst there are currently two other known libraries which do this, there are
 several problems with 64-bit support and also the ability to send sysex
