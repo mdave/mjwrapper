@@ -29,9 +29,9 @@ DISCLAIMER: I am not a Java programmer, and this is the very first time I've
 written a major application using Java, Objective-C/Cocoa, CoreMIDI or any
 other MIDI framework for that matter. I have made many assumptions along the
 way which may invalidate this library completely. If you have suggestions, or
-better, fixes and improvements, then please visit the website at the bottom of
-this page and tell me about it! In addition, I make NO guarantees as to
-whether this library will work for you or not. I can only say that, in my
+better yet, fixes and improvements, then please visit the website at the
+bottom of this page and tell me about it! In addition, I make NO guarantees as
+to whether this library will work for you or not. I can only say that, in my
 case, things have worked fine.
 
 As a side-node, mjwrapper stands for 'Mac Java Wrapper'.
