@@ -1,7 +1,7 @@
-CC=cc
-LD=cc
-LDFLAGS=-dynamiclib -framework JavaVM -framework CoreMIDI -framework Foundation -arch i386 -arch x86_64 -arch ppc
-CFLAGS=-c -I/System/Library/Frameworks/JavaVM.framework/Headers -arch i386 -arch x86_64 -arch ppc
+CC=gcc
+LD=gcc
+LDFLAGS=-dynamiclib -framework JavaVM -framework CoreMIDI -framework Foundation -arch x86_64
+CFLAGS=-c -I/System/Library/Frameworks/JavaVM.framework/Headers -arch x86_64
 JHEADS=CoreMidiWrapper.h CoreMidiDevice.h CoreMidiTransmitter.h CoreMidiReceiver.h
 
 all: mjwrapper.jar
